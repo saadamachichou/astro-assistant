@@ -66,6 +66,16 @@ describe("fast replies", () => {
     assert.match(reply, /custom web apps/i);
   });
 
+  it("respects no-WordPress custom tech requests", () => {
+    const reply = getFastReply({
+      language: "en",
+      messages: [{ role: "user", content: "i dont want wordpress i want robuste tech" }],
+    });
+
+    assert.match(reply, /robust stack/i);
+    assert.doesNotMatch(reply, /WordPress sites/i);
+  });
+
   it("lets later unmatched follow-ups go to the model", () => {
     const reply = getFastReply({
       language: "en",

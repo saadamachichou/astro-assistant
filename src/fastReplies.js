@@ -6,6 +6,8 @@ const REPLIES = {
       "ASTROQODELABS builds websites, web apps, SaaS platforms, e-commerce stores, dashboards, automation, AI chatbots, integrations, and cloud-ready software. What are you trying to create?",
     website:
       "Yes. ASTROQODELABS can build business websites, landing pages, portfolios, WordPress sites, and custom websites focused on mobile UX, speed, and lead generation. What kind of website do you need?",
+    customTech:
+      "Absolutely. ASTROQODELABS can build a custom robust stack instead of WordPress, with modern frontend, backend, database, APIs, and deployment. What should it do?",
     webApp:
       "Yes. ASTROQODELABS builds custom web apps with dashboards, accounts, admin panels, databases, APIs, and integrations. What should the app help your business do?",
     ecommerce:
@@ -30,6 +32,8 @@ const REPLIES = {
       "ASTROQODELABS cree des sites web, applications web, SaaS, boutiques e-commerce, dashboards, automatisations, chatbots IA, integrations et logiciels cloud-ready. Que voulez-vous creer ?",
     website:
       "Oui. ASTROQODELABS peut creer des sites vitrine, landing pages, portfolios, sites WordPress et sites sur mesure axes mobile, performance et generation de leads. Quel type de site voulez-vous ?",
+    customTech:
+      "Oui. ASTROQODELABS peut creer une solution robuste sur mesure au lieu de WordPress, avec frontend, backend, base de donnees, APIs et deploiement. Que doit-elle faire ?",
     webApp:
       "Oui. ASTROQODELABS cree des applications web avec dashboards, comptes, panels admin, bases de donnees, APIs et integrations. Que doit faire l'application pour votre activite ?",
     ecommerce:
@@ -89,6 +93,13 @@ const MATCHERS = [
     patterns: [
       /\b(web app|application|dashboard|portal|admin panel|saas|software|booking|reservation|appointments?|staff|roles?|workflow|platform)\b/i,
       /\b(application web|logiciel|tableau de bord|portail|saas|reservation|rendez-vous|workflow|plateforme)\b/i,
+    ],
+  },
+  {
+    key: "customTech",
+    patterns: [
+      /\b(no wordpress|not wordpress|without wordpress|dont want wordpress|don't want wordpress|do not want wordpress|robust tech|robuste tech|custom tech|custom stack|from scratch)\b/i,
+      /\b(pas wordpress|sans wordpress|je ne veux pas wordpress|tech robuste|stack robuste|sur mesure)\b/i,
     ],
   },
   {
