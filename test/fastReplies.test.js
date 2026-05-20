@@ -24,7 +24,7 @@ describe("fast replies", () => {
     assert.match(reply, /brief/i);
   });
 
-  it("gives first-time detailed project requests a fast starter", () => {
+  it("lets unmatched detailed project requests go to the model", () => {
     const reply = getFastReply({
       language: "en",
       messages: [
@@ -36,7 +36,34 @@ describe("fast replies", () => {
       ],
     });
 
-    assert.match(reply, /first step/i);
+    assert.equal(reply, "");
+  });
+
+  it("does not execute action requests", () => {
+    const reply = getFastReply({
+      language: "en",
+      messages: [{ role: "user", content: "Send my information to your team now." }],
+    });
+
+    assert.match(reply, /cannot send/i);
+  });
+
+  it("redirects off-topic requests back to ASTROQODELABS projects", () => {
+    const reply = getFastReply({
+      language: "en",
+      messages: [{ role: "user", content: "Can you write me a Python script for scraping Instagram?" }],
+    });
+
+    assert.match(reply, /only help with ASTROQODELABS services/i);
+  });
+
+  it("classifies booking dashboards as web apps, not stores", () => {
+    const reply = getFastReply({
+      language: "en",
+      messages: [{ role: "user", content: "I need a booking dashboard for a gym with payments and staff roles." }],
+    });
+
+    assert.match(reply, /custom web apps/i);
   });
 
   it("lets later unmatched follow-ups go to the model", () => {
