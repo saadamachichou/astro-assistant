@@ -22,6 +22,7 @@ const PORT = Number(process.env.PORT || 3001);
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen2.5:7b";
 const FAST_REPLY_TOKENS = Number(process.env.FAST_REPLY_TOKENS || 56);
+const ENABLE_OLLAMA_WARMUP = process.env.ENABLE_OLLAMA_WARMUP === "true";
 const DATABASE_URL = process.env.DATABASE_URL || process.env.POSTGRES_URL || "";
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "";
 const leadPool = createLeadPool(DATABASE_URL);
@@ -376,5 +377,9 @@ server.listen(PORT, () => {
   loadAssistantData().catch((error) => {
     console.warn(`Assistant data cache failed: ${error instanceof Error ? error.message : "Unknown cache error"}`);
   });
-  warmOllamaModel();
+  if (ENABLE_OLLAMA_WARMUP) {
+    warmOllamaModel();
+  } else {
+    console.log("Ollama warmup disabled. Set ENABLE_OLLAMA_WARMUP=true to enable it.");
+  }
 });
