@@ -60,7 +60,10 @@ const MATCHERS = [
   },
   {
     key: "ecommerce",
-    patterns: [/\b(e-?commerce|online store|shop|checkout|payment|sell online)\b/i, /\b(boutique|paiement|vendre en ligne)\b/i],
+    patterns: [
+      /\b(e-?commerce|online store|shop|checkout|payments?|sell online)\b/i,
+      /\b(boutique|paiements?|vendre en ligne)\b/i,
+    ],
   },
   {
     key: "ai",

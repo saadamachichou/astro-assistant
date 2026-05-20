@@ -7,7 +7,7 @@ export function buildOllamaPayload({ model, messages, stream = false, numPredict
     options: {
       temperature: 0.25,
       top_p: 0.9,
-      num_ctx: 1024,
+      num_ctx: 768,
       num_predict: numPredict,
     },
   };
