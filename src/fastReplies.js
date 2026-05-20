@@ -100,6 +100,7 @@ const MATCHERS = [
 export function getFastReply({ messages, language = "en" }) {
   const cleanMessages = Array.isArray(messages) ? messages : [];
   const latestUserMessage = [...cleanMessages].reverse().find((message) => message?.role === "user")?.content || "";
+  const userMessageCount = cleanMessages.filter((message) => message?.role === "user").length;
   const normalizedLanguage = language === "fr" ? "fr" : "en";
 
   if (!latestUserMessage || latestUserMessage.length > 240) {
@@ -112,6 +113,10 @@ export function getFastReply({ messages, language = "en" }) {
     if (matcher.patterns.some((pattern) => pattern.test(normalizedMessage))) {
       return REPLIES[normalizedLanguage][matcher.key];
     }
+  }
+
+  if (userMessageCount <= 1 && normalizedMessage.length <= 420) {
+    return REPLIES[normalizedLanguage].guide;
   }
 
   return "";

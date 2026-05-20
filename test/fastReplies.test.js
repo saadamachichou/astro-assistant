@@ -24,7 +24,7 @@ describe("fast replies", () => {
     assert.match(reply, /brief/i);
   });
 
-  it("lets detailed unusual project requests go to the model", () => {
+  it("gives first-time detailed project requests a fast starter", () => {
     const reply = getFastReply({
       language: "en",
       messages: [
@@ -33,6 +33,19 @@ describe("fast replies", () => {
           content:
             "Our operation has several unusual approval paths across teams, exceptions for different client categories, monthly reporting needs, and legacy spreadsheet imports that need careful analysis.",
         },
+      ],
+    });
+
+    assert.match(reply, /first step/i);
+  });
+
+  it("lets later unmatched follow-ups go to the model", () => {
+    const reply = getFastReply({
+      language: "en",
+      messages: [
+        { role: "user", content: "I have a project idea." },
+        { role: "assistant", content: "What problem should this project solve first?" },
+        { role: "user", content: "The rules are unusual and need deeper reasoning." },
       ],
     });
 

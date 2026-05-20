@@ -64,7 +64,11 @@ export function compactAssistantReply(reply, maxCharacters = 320) {
     return "";
   }
 
-  const normalized = reply.replace(/\s+/g, " ").trim();
+  const normalized = reply
+    .replace(/\*\*/g, "")
+    .replace(/^\s*[-*]\s+/gm, "")
+    .replace(/\s+/g, " ")
+    .trim();
 
   if (normalized.length <= maxCharacters && /[.!?]$/.test(normalized)) {
     return normalized;
