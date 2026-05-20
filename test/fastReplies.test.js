@@ -24,18 +24,27 @@ describe("fast replies", () => {
     assert.match(reply, /brief/i);
   });
 
-  it("lets custom longer project details go to the model", () => {
+  it("lets detailed unusual project requests go to the model", () => {
     const reply = getFastReply({
       language: "en",
       messages: [
         {
           role: "user",
           content:
-            "I need a custom platform for my team with client accounts, invoice tracking, analytics, and several unusual approval workflows. Can you help me think through the first version?",
+            "Our operation has several unusual approval paths across teams, exceptions for different client categories, monthly reporting needs, and legacy spreadsheet imports that need careful analysis.",
         },
       ],
     });
 
     assert.equal(reply, "");
+  });
+
+  it("guides early idea questions quickly", () => {
+    const reply = getFastReply({
+      language: "en",
+      messages: [{ role: "user", content: "I have an idea but I am not sure where to start." }],
+    });
+
+    assert.match(reply, /first step/i);
   });
 });

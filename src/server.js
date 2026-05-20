@@ -4,7 +4,12 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { buildSystemMessage, compactMessages, normalizeMessages } from "./assistantConfig.js";
+import {
+  buildSystemMessage,
+  compactAssistantReply,
+  compactMessages,
+  normalizeMessages,
+} from "./assistantConfig.js";
 import { loadEnvFile } from "./env.js";
 import { getFastReply } from "./fastReplies.js";
 import { createLeadPool, initLeadDatabase, listLeads, saveLead } from "./leadStore.js";
@@ -160,7 +165,7 @@ async function handleChat(request, response) {
         numPredict: FAST_REPLY_TOKENS,
       });
 
-      sendJson(response, 200, { reply, model: OLLAMA_MODEL });
+      sendJson(response, 200, { reply: compactAssistantReply(reply), model: OLLAMA_MODEL });
     } finally {
       clearTimeout(timeout);
     }

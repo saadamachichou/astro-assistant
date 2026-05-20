@@ -58,3 +58,30 @@ export function compactMessages(
           : message.content,
     }));
 }
+
+export function compactAssistantReply(reply, maxCharacters = 320) {
+  if (typeof reply !== "string") {
+    return "";
+  }
+
+  const normalized = reply.replace(/\s+/g, " ").trim();
+
+  if (normalized.length <= maxCharacters && /[.!?]$/.test(normalized)) {
+    return normalized;
+  }
+
+  const questionIndex = normalized.indexOf("?");
+
+  if (questionIndex >= 0 && questionIndex <= maxCharacters) {
+    return normalized.slice(0, questionIndex + 1).trim();
+  }
+
+  const shortened = normalized.slice(0, maxCharacters);
+  const sentenceEnd = Math.max(shortened.lastIndexOf("."), shortened.lastIndexOf("!"), shortened.lastIndexOf("?"));
+
+  if (sentenceEnd >= 60) {
+    return shortened.slice(0, sentenceEnd + 1).trim();
+  }
+
+  return `${shortened.replace(/[,;:\s]+$/g, "").trim()}.`;
+}

@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { buildSystemMessage, compactMessages, normalizeMessages } from "../src/assistantConfig.js";
+import {
+  buildSystemMessage,
+  compactAssistantReply,
+  compactMessages,
+  normalizeMessages,
+} from "../src/assistantConfig.js";
 
 describe("assistant config", () => {
   it("combines the system prompt and knowledge base into one system message", () => {
@@ -48,5 +53,14 @@ describe("assistant config", () => {
       { role: "assistant", content: "old answ..." },
       { role: "user", content: "xxxxxxxx..." },
     ]);
+  });
+
+  it("trims unfinished model replies to a complete-looking answer", () => {
+    const reply = compactAssistantReply(
+      "I can help you shape the first version. To start, tell me the main problem and the users. Additionally this unfinished part should be removed",
+      90,
+    );
+
+    assert.equal(reply, "I can help you shape the first version. To start, tell me the main problem and the users.");
   });
 });

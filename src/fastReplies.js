@@ -18,6 +18,8 @@ const REPLIES = {
       "Timeline depends on complexity, content readiness, integrations, feedback speed, and launch needs. I can prepare a short brief for the team to review. When would you like to start?",
     contact:
       `You can contact ASTROQODELABS at ${CONTACT_EMAIL}. I can also collect your project details here so the team can follow up with better context.`,
+    guide:
+      "A good first step is to define the goal, users, must-have features, timeline, and planned investment range. What problem should this project solve first?",
   },
   fr: {
     services:
@@ -36,6 +38,8 @@ const REPLIES = {
       "Le delai depend de la complexite, du contenu, des integrations, de la vitesse des retours et du lancement. Je peux preparer un brief pour l'equipe. Quand voulez-vous commencer ?",
     contact:
       `Vous pouvez contacter ASTROQODELABS a ${CONTACT_EMAIL}. Je peux aussi collecter les details du projet ici pour aider l'equipe a vous recontacter avec contexte.`,
+    guide:
+      "Le bon depart est de clarifier l'objectif, les utilisateurs, les fonctions essentielles, le delai et l'investissement prevu. Quel probleme voulez-vous resoudre d'abord ?",
   },
 };
 
@@ -82,6 +86,13 @@ const MATCHERS = [
     patterns: [
       /\b(what do you do|services|offer|can you do|help me with)\b/i,
       /\b(que faites-vous|services|offres|vous faites quoi|aidez-moi)\b/i,
+    ],
+  },
+  {
+    key: "guide",
+    patterns: [
+      /\b(idea|guide|direction|not sure|unsure|where to start|start first|first version|planning|mvp advice)\b/i,
+      /\b(id[eé]e|guider|direction|pas s[uû]r|par quoi commencer|premiere version|premi[eè]re version|planifier)\b/i,
     ],
   },
 ];
