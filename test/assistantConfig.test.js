@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { buildSystemMessage, normalizeMessages } from "../src/assistantConfig.js";
+import { buildSystemMessage, compactMessages, normalizeMessages } from "../src/assistantConfig.js";
 
 describe("assistant config", () => {
   it("combines the system prompt and knowledge base into one system message", () => {
@@ -14,7 +14,7 @@ describe("assistant config", () => {
     assert.equal(systemMessage.role, "system");
     assert.match(systemMessage.content, /You are Astro Assistant\./);
     assert.match(systemMessage.content, /ASTROQODELABS builds scalable websites\./);
-    assert.match(systemMessage.content, /Use the company knowledge below/);
+    assert.match(systemMessage.content, /compact company brief/i);
     assert.match(systemMessage.content, /The visitor selected French/);
   });
 
@@ -31,6 +31,22 @@ describe("assistant config", () => {
     assert.deepEqual(messages, [
       { role: "assistant", content: "Hello" },
       { role: "user", content: "Do you build SaaS?" },
+    ]);
+  });
+
+  it("keeps recent history compact for faster local model replies", () => {
+    const messages = compactMessages(
+      [
+        { role: "user", content: "old message" },
+        { role: "assistant", content: "old answer" },
+        { role: "user", content: "x".repeat(20) },
+      ],
+      { limit: 2, maxCharacters: 8 },
+    );
+
+    assert.deepEqual(messages, [
+      { role: "assistant", content: "old answ..." },
+      { role: "user", content: "xxxxxxxx..." },
     ]);
   });
 });

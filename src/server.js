@@ -4,8 +4,9 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { buildSystemMessage, normalizeMessages } from "./assistantConfig.js";
+import { buildSystemMessage, compactMessages, normalizeMessages } from "./assistantConfig.js";
 import { loadEnvFile } from "./env.js";
+import { getFastReply } from "./fastReplies.js";
 import { createLeadPool, initLeadDatabase, listLeads, saveLead } from "./leadStore.js";
 import { chatWithOllama, streamWithOllama } from "./ollamaClient.js";
 
@@ -137,6 +138,13 @@ async function handleChat(request, response) {
     }
 
     const { systemPrompt, knowledgeBase } = await loadAssistantData();
+    const fastReply = getFastReply({ messages: userMessages, language });
+
+    if (fastReply) {
+      sendJson(response, 200, { reply: fastReply, model: "fast-reply" });
+      return;
+    }
+
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 90_000);
 
@@ -146,7 +154,7 @@ async function handleChat(request, response) {
         model: OLLAMA_MODEL,
         messages: [
           buildSystemMessage({ systemPrompt, knowledgeBase, language }),
-          ...userMessages.slice(-16),
+          ...compactMessages(userMessages),
         ],
         signal: controller.signal,
         numPredict: FAST_REPLY_TOKENS,
@@ -183,6 +191,7 @@ async function handleChatStream(request, response) {
     }
 
     const { systemPrompt, knowledgeBase } = await loadAssistantData();
+    const fastReply = getFastReply({ messages: userMessages, language });
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 90_000);
 
@@ -194,6 +203,12 @@ async function handleChatStream(request, response) {
     didStartStream = true;
 
     try {
+      if (fastReply) {
+        response.write(fastReply);
+        response.end();
+        return;
+      }
+
       let questionCount = 0;
       let streamedCharacters = 0;
       const maxStreamedCharacters = 420;
@@ -203,7 +218,7 @@ async function handleChatStream(request, response) {
         model: OLLAMA_MODEL,
         messages: [
           buildSystemMessage({ systemPrompt, knowledgeBase, language }),
-          ...userMessages.slice(-10),
+          ...compactMessages(userMessages, { limit: 4, maxCharacters: 420 }),
         ],
         signal: controller.signal,
         numPredict: FAST_REPLY_TOKENS,
