@@ -35,6 +35,9 @@ describe("lead intake", () => {
     assert.equal(profile.phone, "+212 600 000000");
     assert.equal(profile.communicationMethod, "");
     assert.equal(profile.leadCategory, "landing-page");
+    assert.ok(profile.leadScore > 0);
+    assert.ok(profile.complexityScore > 0);
+    assert.ok(profile.leadSummary.includes("Landing page"));
   });
 
   it("tracks progress toward a complete dashboard profile", () => {

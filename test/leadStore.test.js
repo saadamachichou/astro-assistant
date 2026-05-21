@@ -23,6 +23,10 @@ describe("lead store", () => {
       fileNotes: " https://example.com/brief.pdf ",
       leadCategory: " landing-page ",
       leadProgress: 80,
+      leadScore: 72,
+      urgencyScore: 60,
+      complexityScore: 45,
+      leadSummary: "Strong landing page lead",
       status: "contacted",
       messages: [
         { role: "user", content: "I need a website" },
@@ -48,6 +52,10 @@ describe("lead store", () => {
     assert.equal(lead.fileNotes, "https://example.com/brief.pdf");
     assert.equal(lead.leadCategory, "landing-page");
     assert.equal(lead.leadProgress, 80);
+    assert.equal(lead.leadScore, 72);
+    assert.equal(lead.urgencyScore, 60);
+    assert.equal(lead.complexityScore, 45);
+    assert.equal(lead.leadSummary, "Strong landing page lead");
     assert.equal(lead.status, "contacted");
     assert.deepEqual(lead.messages, [
       { role: "user", content: "I need a website" },

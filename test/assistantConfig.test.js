@@ -5,6 +5,7 @@ import {
   buildSystemMessage,
   compactAssistantReply,
   compactMessages,
+  resolveLanguage,
   normalizeMessages,
 } from "../src/assistantConfig.js";
 
@@ -20,7 +21,14 @@ describe("assistant config", () => {
     assert.match(systemMessage.content, /You are Astro Assistant\./);
     assert.match(systemMessage.content, /ASTROQODELABS builds scalable websites\./);
     assert.match(systemMessage.content, /compact company brief/i);
-    assert.match(systemMessage.content, /The visitor selected French/);
+    assert.match(systemMessage.content, /Mirror the visitor in French/);
+  });
+
+  it("mirrors Arabic when the latest visitor message is Arabic", () => {
+    assert.equal(
+      resolveLanguage("en", [{ role: "user", content: "مرحبا اريد موقع لشركتي" }]),
+      "ar",
+    );
   });
 
   it("keeps only valid chat messages with string content", () => {

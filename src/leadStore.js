@@ -37,7 +37,7 @@ export function normalizeLeadInput(input = {}) {
   const status = cleanText(input.status) || "new";
   const lead = {
     sessionId: cleanText(input.sessionId),
-    language: input.language === "fr" ? "fr" : "en",
+    language: input.language === "fr" || input.language === "ar" ? input.language : "en",
     name: cleanText(input.name),
     companyName: cleanText(input.companyName),
     email: cleanText(input.email),
@@ -53,6 +53,10 @@ export function normalizeLeadInput(input = {}) {
     fileNotes: cleanText(input.fileNotes),
     leadCategory: cleanText(input.leadCategory),
     leadProgress: Math.min(Math.max(Number(input.leadProgress) || 0, 0), 100),
+    leadScore: Math.min(Math.max(Number(input.leadScore) || 0, 0), 100),
+    urgencyScore: Math.min(Math.max(Number(input.urgencyScore) || 0, 0), 100),
+    complexityScore: Math.min(Math.max(Number(input.complexityScore) || 0, 0), 100),
+    leadSummary: cleanText(input.leadSummary),
     confirmedAt: input.confirmedAt || null,
     status: ALLOWED_STATUSES.has(status) ? status : "new",
     messages: normalizeMessages(input.messages),
@@ -124,6 +128,10 @@ export async function initLeadDatabase(pool) {
       ADD COLUMN IF NOT EXISTS file_notes TEXT,
       ADD COLUMN IF NOT EXISTS lead_category TEXT,
       ADD COLUMN IF NOT EXISTS lead_progress INTEGER NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS lead_score INTEGER NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS urgency_score INTEGER NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS complexity_score INTEGER NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS lead_summary TEXT,
       ADD COLUMN IF NOT EXISTS confirmed_at TIMESTAMPTZ;
   `);
 
@@ -162,6 +170,10 @@ function mapLeadRow(row) {
     fileNotes: row.file_notes,
     leadCategory: row.lead_category,
     leadProgress: row.lead_progress,
+    leadScore: row.lead_score,
+    urgencyScore: row.urgency_score,
+    complexityScore: row.complexity_score,
+    leadSummary: row.lead_summary,
     confirmedAt: row.confirmed_at,
     messages: row.messages || [],
     source: row.source,
@@ -192,10 +204,14 @@ export async function saveLead(pool, input) {
         file_notes,
         lead_category,
         lead_progress,
+        lead_score,
+        urgency_score,
+        complexity_score,
+        lead_summary,
         confirmed_at,
         messages
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18::jsonb)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24::jsonb)
       RETURNING *;
     `,
     [
@@ -217,6 +233,10 @@ export async function saveLead(pool, input) {
       lead.fileNotes,
       lead.leadCategory,
       lead.leadProgress,
+      lead.leadScore,
+      lead.urgencyScore,
+      lead.complexityScore,
+      lead.leadSummary,
       lead.confirmedAt,
       JSON.stringify(lead.messages),
     ],
@@ -253,10 +273,14 @@ export async function upsertLeadDraft(pool, input) {
         file_notes,
         lead_category,
         lead_progress,
+        lead_score,
+        urgency_score,
+        complexity_score,
+        lead_summary,
         confirmed_at,
         messages
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20::jsonb)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24::jsonb)
       ON CONFLICT (session_id)
       WHERE session_id IS NOT NULL
       DO UPDATE SET
@@ -278,6 +302,10 @@ export async function upsertLeadDraft(pool, input) {
         file_notes = COALESCE(EXCLUDED.file_notes, astro_leads.file_notes),
         lead_category = COALESCE(EXCLUDED.lead_category, astro_leads.lead_category),
         lead_progress = GREATEST(EXCLUDED.lead_progress, astro_leads.lead_progress),
+        lead_score = GREATEST(EXCLUDED.lead_score, astro_leads.lead_score),
+        urgency_score = GREATEST(EXCLUDED.urgency_score, astro_leads.urgency_score),
+        complexity_score = GREATEST(EXCLUDED.complexity_score, astro_leads.complexity_score),
+        lead_summary = COALESCE(EXCLUDED.lead_summary, astro_leads.lead_summary),
         confirmed_at = COALESCE(EXCLUDED.confirmed_at, astro_leads.confirmed_at),
         messages = EXCLUDED.messages
       RETURNING *;
@@ -301,6 +329,10 @@ export async function upsertLeadDraft(pool, input) {
       lead.fileNotes,
       lead.leadCategory,
       lead.leadProgress,
+      lead.leadScore,
+      lead.urgencyScore,
+      lead.complexityScore,
+      lead.leadSummary,
       lead.confirmedAt,
       JSON.stringify(lead.messages),
     ],

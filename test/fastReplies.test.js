@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { getFastReply, looksLikeInternalLeak } from "../src/fastReplies.js";
+import { getFastReply, getIntentRouterStats, looksLikeInternalLeak } from "../src/fastReplies.js";
 
 describe("fast replies", () => {
   it("answers common service questions without calling the model", () => {
@@ -11,7 +11,14 @@ describe("fast replies", () => {
     });
 
     assert.match(reply, /websites/i);
-    assert.match(reply, /What are you trying to create/);
+    assert.match(reply, /What do you want to create/);
+  });
+
+  it("exposes an 11-category router with broad scripted coverage", () => {
+    const stats = getIntentRouterStats();
+
+    assert.equal(stats.categories, 11);
+    assert.ok(stats.scriptedPatterns >= 72);
   });
 
   it("respects the selected French language", () => {
@@ -21,7 +28,7 @@ describe("fast replies", () => {
     });
 
     assert.match(reply, /prix/i);
-    assert.match(reply, /brief/i);
+    assert.match(reply, /fourchette/i);
   });
 
   it("lets unmatched detailed project requests go to the model", () => {
@@ -45,7 +52,7 @@ describe("fast replies", () => {
       messages: [{ role: "user", content: "Send my information to your team now." }],
     });
 
-    assert.match(reply, /cannot send/i);
+    assert.match(reply, /can't send/i);
   });
 
   it("redirects off-topic requests back to ASTROQODELABS projects", () => {
@@ -54,7 +61,7 @@ describe("fast replies", () => {
       messages: [{ role: "user", content: "Can you write me a Python script for scraping Instagram?" }],
     });
 
-    assert.match(reply, /only help with ASTROQODELABS services/i);
+    assert.match(reply, /ASTROQODELABS services/i);
   });
 
   it("classifies booking dashboards as web apps, not stores", () => {
@@ -63,7 +70,7 @@ describe("fast replies", () => {
       messages: [{ role: "user", content: "I need a booking dashboard for a gym with payments and staff roles." }],
     });
 
-    assert.match(reply, /custom web apps/i);
+    assert.match(reply, /web apps/i);
   });
 
   it("respects no-WordPress custom tech requests", () => {
@@ -72,7 +79,7 @@ describe("fast replies", () => {
       messages: [{ role: "user", content: "i dont want wordpress i want robuste tech" }],
     });
 
-    assert.match(reply, /robust stack/i);
+    assert.match(reply, /custom robust stack/i);
     assert.doesNotMatch(reply, /WordPress sites/i);
   });
 
@@ -95,7 +102,7 @@ describe("fast replies", () => {
       messages: [{ role: "user", content: "I have an idea but I am not sure where to start." }],
     });
 
-    assert.match(reply, /first step/i);
+    assert.match(reply, /one sentence/i);
   });
 
   it("educates non-technical visitors without using the model", () => {
@@ -121,7 +128,7 @@ describe("fast replies", () => {
       messages: [{ role: "user", content: "yes i mean i dont know what website are ?" }],
     });
 
-    assert.match(reply, /online place/i);
+    assert.match(reply, /builds trust/i);
   });
 
   it("guides product launch landing pages", () => {
@@ -133,7 +140,7 @@ describe("fast replies", () => {
 
     const reply = getFastReply({ language: "en", messages });
 
-    assert.match(reply, /product launch/i);
+    assert.match(reply, /focused offer/i);
     assert.doesNotMatch(reply, /\*\*/);
   });
 
@@ -146,12 +153,21 @@ describe("fast replies", () => {
 
     const reply = getFastReply({ language: "en", messages });
 
-    assert.match(reply, /mechanical device/i);
+    assert.match(reply, /product landing page/i);
     assert.match(reply, /Who should buy it/);
   });
 
   it("detects internal prompt leaks", () => {
     assert.equal(looksLikeInternalLeak("Widget behavior: this is a website chat widget"), true);
     assert.equal(looksLikeInternalLeak("What product are you launching?"), false);
+  });
+
+  it("answers Arabic service questions in Arabic", () => {
+    const reply = getFastReply({
+      language: "en",
+      messages: [{ role: "user", content: "مرحبا اريد متجر الكتروني" }],
+    });
+
+    assert.match(reply, /ماذا|نعم|نبني|يمكننا/);
   });
 });

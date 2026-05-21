@@ -9,9 +9,10 @@ import {
   compactAssistantReply,
   compactMessages,
   normalizeMessages,
+  resolveLanguage,
 } from "./assistantConfig.js";
 import { loadEnvFile } from "./env.js";
-import { getFastReply, getSafeFallbackReply, looksLikeInternalLeak } from "./fastReplies.js";
+import { getFastReply, getIntentRouterStats, getSafeFallbackReply, looksLikeInternalLeak } from "./fastReplies.js";
 import { extractLeadProfile, getNextIntakeReply } from "./leadIntake.js";
 import { createLeadPool, initLeadDatabase, listLeads, saveLead, upsertLeadDraft } from "./leadStore.js";
 import { chatWithOllama, streamWithOllama } from "./ollamaClient.js";
@@ -107,7 +108,7 @@ async function warmOllamaModel() {
   try {
     const { systemPrompt, knowledgeBase } = await loadAssistantData();
 
-    for (const language of ["en", "fr"]) {
+    for (const language of ["en", "fr", "ar"]) {
       await chatWithOllama({
         baseUrl: OLLAMA_BASE_URL,
         model: OLLAMA_MODEL,
@@ -134,7 +135,7 @@ async function handleChat(request, response) {
   try {
     const body = await readJsonBody(request);
     const userMessages = normalizeMessages(body.messages);
-    const language = body.language === "fr" ? "fr" : "en";
+    const language = resolveLanguage(body.language, userMessages);
 
     if (userMessages.length === 0) {
       sendJson(response, 400, {
@@ -190,7 +191,7 @@ async function handleChatStream(request, response) {
   try {
     const body = await readJsonBody(request);
     const userMessages = normalizeMessages(body.messages);
-    const language = body.language === "fr" ? "fr" : "en";
+    const language = resolveLanguage(body.language, userMessages);
 
     if (userMessages.length === 0) {
       sendJson(response, 400, {
@@ -294,6 +295,7 @@ async function handleHealth(response) {
       ok: true,
       ollama: ollamaResponse.ok,
       model: OLLAMA_MODEL,
+      router: getIntentRouterStats(),
       models,
     });
   } catch (error) {
@@ -301,6 +303,7 @@ async function handleHealth(response) {
       ok: true,
       ollama: false,
       model: OLLAMA_MODEL,
+      router: getIntentRouterStats(),
       error: error instanceof Error ? error.message : "Unknown health error",
     });
   }
@@ -324,7 +327,7 @@ async function handleSaveLeadDraft(request, response) {
   try {
     const body = await readJsonBody(request);
     const pool = await ensureLeadDatabase();
-    const language = body.language === "fr" ? "fr" : "en";
+    const language = resolveLanguage(body.language, body.messages);
     const profile = extractLeadProfile(body.messages, language);
     const lead = await upsertLeadDraft(pool, {
       ...body,

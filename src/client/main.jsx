@@ -688,6 +688,10 @@ function AdminPanel() {
         lead.projectType,
         lead.projectGoal,
         lead.leadCategory,
+        lead.leadScore,
+        lead.urgencyScore,
+        lead.complexityScore,
+        lead.leadSummary,
         lead.status,
       ]
         .filter(Boolean)
@@ -727,6 +731,9 @@ function AdminPanel() {
       "id",
       "status",
       "progress",
+      "lead_score",
+      "urgency_score",
+      "complexity_score",
       "category",
       "name",
       "company",
@@ -739,12 +746,16 @@ function AdminPanel() {
       "timeline",
       "preferred_contact",
       "notes",
+      "lead_summary",
       "created_at",
     ];
     const rows = filteredLeads.map((lead) => [
       lead.id,
       lead.status,
       lead.leadProgress,
+      lead.leadScore,
+      lead.urgencyScore,
+      lead.complexityScore,
       lead.leadCategory,
       lead.name,
       lead.companyName,
@@ -757,6 +768,7 @@ function AdminPanel() {
       lead.timeline,
       lead.communicationMethod,
       lead.additionalNotes,
+      lead.leadSummary,
       lead.createdAt,
     ]);
     const csv = [headers, ...rows]
@@ -827,6 +839,9 @@ function AdminPanel() {
                 <div className="flex flex-wrap gap-2">
                   <Badge variant="secondary">{lead.status}</Badge>
                   <Badge variant="secondary">{lead.leadProgress || 0}%</Badge>
+                  <Badge variant="secondary">Lead {lead.leadScore || 0}</Badge>
+                  <Badge variant="secondary">Urgency {lead.urgencyScore || 0}</Badge>
+                  <Badge variant="secondary">Complexity {lead.complexityScore || 0}</Badge>
                   {lead.leadCategory && <Badge variant="secondary">{lead.leadCategory}</Badge>}
                 </div>
               </div>
@@ -839,10 +854,14 @@ function AdminPanel() {
                 <LeadFact label="Budget" value={lead.budgetRange} />
                 <LeadFact label="Timeline" value={lead.timeline} />
                 <LeadFact label="Preferred contact" value={lead.communicationMethod} />
+                <LeadFact label="Lead score" value={lead.leadScore} />
+                <LeadFact label="Urgency" value={lead.urgencyScore} />
+                <LeadFact label="Complexity" value={lead.complexityScore} />
                 <LeadFact label="Files / links" value={lead.fileNotes} />
               </div>
 
               {lead.projectGoal && <p className="mt-4 text-sm leading-6 text-slate-200">{lead.projectGoal}</p>}
+              {lead.leadSummary && <p className="mt-2 text-sm leading-6 text-cyan-100">{lead.leadSummary}</p>}
               {lead.additionalNotes && <p className="mt-2 text-sm leading-6 text-slate-400">{lead.additionalNotes}</p>}
 
               <details className="mt-4 rounded-2xl border border-white/10 bg-black/18 p-3">

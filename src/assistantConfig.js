@@ -2,9 +2,37 @@ const ALLOWED_CHAT_ROLES = new Set(["user", "assistant"]);
 const DEFAULT_HISTORY_LIMIT = 6;
 const DEFAULT_MESSAGE_CHARACTER_LIMIT = 520;
 const LANGUAGE_DIRECTIVES = {
-  en: "The visitor selected English before starting the conversation. Reply in English unless the visitor explicitly switches language.",
-  fr: "The visitor selected French before starting the conversation. Reply in French unless the visitor explicitly switches language.",
+  en: "Mirror the visitor in English unless they clearly switch language.",
+  fr: "Mirror the visitor in French unless they clearly switch language.",
+  ar: "Mirror the visitor in Arabic unless they clearly switch language.",
 };
+
+export function detectMessageLanguage(text = "") {
+  if (/[\u0600-\u06FF]/.test(text)) return "ar";
+
+  const normalized = String(text).toLowerCase();
+  if (
+    /\b(bonjour|salut|merci|devis|tarif|prix|site web|application|boutique|d[ée]lai|fran[çc]ais|contactez|rendez-vous|appel|t[ée]l[ée]phone)\b/i.test(
+      normalized,
+    )
+  ) {
+    return "fr";
+  }
+
+  return "en";
+}
+
+export function resolveLanguage(selectedLanguage = "en", messages = []) {
+  const latestUserMessage = Array.isArray(messages)
+    ? [...messages].reverse().find((message) => message?.role === "user")?.content || ""
+    : "";
+
+  if (latestUserMessage) {
+    return detectMessageLanguage(latestUserMessage);
+  }
+
+  return selectedLanguage === "fr" || selectedLanguage === "ar" ? selectedLanguage : "en";
+}
 
 export function buildSystemMessage({ systemPrompt, knowledgeBase, language = "en" }) {
   const languageDirective = LANGUAGE_DIRECTIVES[language] || LANGUAGE_DIRECTIVES.en;
@@ -16,7 +44,7 @@ export function buildSystemMessage({ systemPrompt, knowledgeBase, language = "en
       "",
       languageDirective,
       "",
-      "Use the compact company brief below as the source of truth for ASTROQODELABS facts. If the brief is missing or uncertain, say the team can confirm after reviewing the project.",
+      "Use the compact company brief as source of truth. If uncertain, say our team can confirm after reviewing the project.",
       "",
       "COMPACT COMPANY BRIEF",
       knowledgeBase.trim(),

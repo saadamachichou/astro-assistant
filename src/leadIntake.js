@@ -41,7 +41,25 @@ const FIELD_QUESTIONS = {
     additionalNotes: "Autres notes, liens, fichiers ou exigences a ajouter ? Si aucun, dites aucun.",
     confirm: "Voici le brief : {summary} Je l'enregistre comme brief confirme pour l'equipe ?",
   },
+  ar: {
+    serviceRequested: "ماذا تريد أن تبني: موقع، صفحة هبوط، تطبيق ويب، متجر، SaaS، أتمتة، أو شيء آخر؟",
+    projectGoal: "ما النتيجة التي تريد أن يحققها هذا المشروع؟",
+    name: "ما اسمك الكامل؟",
+    companyName: "ما اسم شركتك أو علامتك؟ إذا لا يوجد، اكتب مشروع شخصي.",
+    email: "ما البريد الإلكتروني المناسب لتواصل فريقنا؟",
+    phone: "ما رقم الهاتف المناسب؟",
+    location: "في أي بلد ومدينة أنت؟",
+    budgetRange: "هل لديك نطاق استثمار مخطط؟",
+    timeline: "متى تريد البدء أو الإطلاق؟",
+    communicationMethod: "كيف تفضل التواصل: بريد، هاتف، أو واتساب؟",
+    additionalNotes: "هل توجد ملاحظات أو روابط أو ملفات إضافية؟ إذا لا يوجد، اكتب لا يوجد.",
+    confirm: "هذا ملخص المشروع: {summary} هل أعتمده كملخص مؤكد لفريقنا؟",
+  },
 };
+
+function normalizeLanguage(language = "en") {
+  return language === "fr" || language === "ar" ? language : "en";
+}
 
 function cleanText(value) {
   if (typeof value !== "string") {
@@ -126,6 +144,7 @@ function detectService(text) {
   if (/\b(ai|chatbot|automation|automate|ia|automatisation)\b/.test(normalized)) return "AI / automation";
   if (/\b(website|site web|wordpress|portfolio|business site|full website)\b/.test(normalized)) return "Website";
   if (/\b(custom tech|robust tech|robuste tech|custom stack|from scratch)\b/.test(normalized)) return "Custom software";
+  if (/موقع|تطبيق|متجر|أتمتة|ذكاء|صفحة|منصة/.test(text)) return "Digital project";
 
   return "";
 }
@@ -134,6 +153,7 @@ function detectBudget(text) {
   const normalized = text.toLowerCase();
 
   if (/\b(not set|no budget|don't know|dont know|pas encore|je ne sais pas)\b/.test(normalized)) return "Not set";
+  if (/غير محدد|لا اعرف|لا أعرف|لا يوجد/.test(text)) return "Not set";
   return text.match(/(?:[$€£]?\s?\d[\d\s,.kK-]*(?:\s?(?:mad|usd|eur|gbp|dh|dhs|€|\$))?)/)?.[0]?.trim() || "";
 }
 
@@ -148,6 +168,10 @@ function detectTimeline(text) {
     return text.trim();
   }
 
+  if (/عاجل|هذا الأسبوع|هذا الشهر|الشهر القادم|قريبا|إطلاق/.test(text)) {
+    return text.trim();
+  }
+
   return "";
 }
 
@@ -159,6 +183,10 @@ function detectCommunicationMethod(text) {
     if (/\b(phone|call|telephone|appel)\b/.test(normalized)) return "Phone";
     return "Email";
   }
+
+  if (/واتساب/.test(text)) return "WhatsApp";
+  if (/هاتف|اتصال/.test(text)) return "Phone";
+  if (/بريد/.test(text)) return "Email";
 
   return "";
 }
@@ -188,6 +216,51 @@ function detectCategory(profile) {
   return "general-project";
 }
 
+function detectUrgencyScore(profile, allUserText = "") {
+  const value = `${profile.timeline} ${allUserText}`.toLowerCase();
+  if (/\b(asap|urgent|immediately|this week|today|tomorrow|vite|urgent|cette semaine)\b/i.test(value)) return 90;
+  if (/\b(this month|next month|soon|ce mois|mois prochain|bientot|launch)\b/i.test(value)) return 70;
+  if (/عاجل|هذا الأسبوع|اليوم|غدا/.test(allUserText)) return 90;
+  if (/هذا الشهر|الشهر القادم|قريبا|إطلاق/.test(allUserText)) return 70;
+  if (profile.timeline) return 50;
+  return 20;
+}
+
+function detectComplexityScore(profile, allUserText = "") {
+  const value = `${profile.serviceRequested} ${profile.projectGoal} ${allUserText}`.toLowerCase();
+  let score = 25;
+
+  if (/\b(saas|multi-tenant|microservices|kubernetes|terraform|enterprise|rbac|saml|keycloak)\b/i.test(value)) score += 45;
+  if (/\b(dashboard|admin|api|integration|payment|stripe|cmi|database|automation|ai|workflow)\b/i.test(value)) score += 25;
+  if (/\b(website|landing|portfolio|wordpress)\b/i.test(value)) score += 10;
+  if (/منصة|صلاحيات|دفع|تكامل|أتمتة|لوحة/.test(allUserText)) score += 25;
+
+  return Math.min(score, 100);
+}
+
+function detectLeadScore(profile, allUserText = "") {
+  const progressScore = getLeadProgress(profile).progress * 0.45;
+  const contactScore = (profile.email ? 18 : 0) + (profile.phone ? 10 : 0);
+  const intentScore = profile.serviceRequested || profile.projectGoal ? 16 : 0;
+  const budgetScore = profile.budgetRange ? 8 : 0;
+  const timelineScore = profile.timeline ? 8 : 0;
+  const highIntentBonus = /\b(proposal|quote|book|call|meeting|devis|rendez-vous)\b/i.test(allUserText) ? 10 : 0;
+
+  return Math.min(Math.round(progressScore + contactScore + intentScore + budgetScore + timelineScore + highIntentBonus), 100);
+}
+
+function buildIntelligenceSummary(profile) {
+  const parts = [
+    profile.serviceRequested && `Service: ${profile.serviceRequested}`,
+    profile.projectGoal && `Goal: ${profile.projectGoal}`,
+    profile.budgetRange && `Budget: ${profile.budgetRange}`,
+    profile.timeline && `Timeline: ${profile.timeline}`,
+    profile.communicationMethod && `Contact: ${profile.communicationMethod}`,
+  ].filter(Boolean);
+
+  return parts.length ? parts.join(" | ") : "Early conversation. More qualification needed.";
+}
+
 function setFromPreviousQuestion(profile, question, answer) {
   const normalizedQuestion = question.toLowerCase();
   const cleanAnswer = cleanText(answer);
@@ -196,35 +269,36 @@ function setFromPreviousQuestion(profile, question, answer) {
     return;
   }
 
-  if (/full name|nom complet/.test(normalizedQuestion)) profile.name ||= cleanAnswer;
-  if (/company|brand|entreprise|marque/.test(normalizedQuestion)) profile.companyName ||= cleanAnswer;
-  if (/email/.test(normalizedQuestion)) profile.email ||= findEmail(cleanAnswer) || cleanAnswer;
-  if (/phone|numero|telephone/.test(normalizedQuestion)) profile.phone ||= findPhone(cleanAnswer) || cleanAnswer;
-  if (/country|city|pays|ville/.test(normalizedQuestion)) profile.location ||= cleanAnswer;
-  if (/investment|budget|fourchette/.test(normalizedQuestion)) profile.budgetRange ||= detectBudget(cleanAnswer) || cleanAnswer;
-  if (/start|launch|commencer|lancer/.test(normalizedQuestion)) profile.timeline ||= detectTimeline(cleanAnswer) || cleanAnswer;
-  if (/prefer.*contact|how do you prefer|contacted|contacte|whatsapp/.test(normalizedQuestion)) {
+  if (/full name|nom complet|اسمك الكامل/.test(normalizedQuestion)) profile.name ||= cleanAnswer;
+  if (/company|brand|entreprise|marque|شركتك|علامتك/.test(normalizedQuestion)) profile.companyName ||= cleanAnswer;
+  if (/email|البريد/.test(normalizedQuestion)) profile.email ||= findEmail(cleanAnswer) || cleanAnswer;
+  if (/phone|numero|telephone|الهاتف|رقم/.test(normalizedQuestion)) profile.phone ||= findPhone(cleanAnswer) || cleanAnswer;
+  if (/country|city|pays|ville|بلد|مدينة/.test(normalizedQuestion)) profile.location ||= cleanAnswer;
+  if (/investment|budget|fourchette|استثمار|ميزانية/.test(normalizedQuestion)) profile.budgetRange ||= detectBudget(cleanAnswer) || cleanAnswer;
+  if (/start|launch|commencer|lancer|البدء|الإطلاق|اطلاق/.test(normalizedQuestion)) profile.timeline ||= detectTimeline(cleanAnswer) || cleanAnswer;
+  if (/prefer.*contact|how do you prefer|contacted|contacte|whatsapp|تفضل التواصل|واتساب/.test(normalizedQuestion)) {
     profile.communicationMethod ||= detectCommunicationMethod(cleanAnswer) || cleanAnswer;
   }
-  if (/notes|links|files|requirements|fichiers|exigences/.test(normalizedQuestion)) {
+  if (/notes|links|files|requirements|fichiers|exigences|ملاحظات|روابط|ملفات/.test(normalizedQuestion)) {
     profile.additionalNotes ||= cleanAnswer;
     profile.fileNotes ||= findUrls(cleanAnswer).join(", ");
   }
-  if (/business achieve|resultat|problem|objectif/.test(normalizedQuestion)) {
+  if (/business achieve|resultat|problem|objectif|نتيجة|مشكلة|هدف/.test(normalizedQuestion)) {
     profile.projectGoal = cleanAnswer;
   }
-  if (/what do you want to build|que voulez-vous creer|service/.test(normalizedQuestion)) {
+  if (/what do you want to build|que voulez-vous creer|service|ماذا تريد أن تبني|ماذا تريد ان تبني/.test(normalizedQuestion)) {
     profile.serviceRequested = detectService(cleanAnswer) || cleanAnswer;
   }
 }
 
 export function extractLeadProfile(messages = [], language = "en") {
+  const normalizedLanguage = normalizeLanguage(language);
   const userMessages = getUserMessages(messages);
   const latestUserMessage = getLatestUserMessage(messages);
   const previousAssistantQuestion = getPreviousAssistantQuestion(messages);
   const allUserText = userMessages.map((message) => message.content).join("\n");
   const profile = {
-    language: language === "fr" ? "fr" : "en",
+    language: normalizedLanguage,
     name: "",
     companyName: "",
     email: findEmail(allUserText),
@@ -269,6 +343,10 @@ export function extractLeadProfile(messages = [], language = "en") {
 
   profile.leadCategory = detectCategory(profile);
   profile.leadProgress = getLeadProgress(profile).progress;
+  profile.urgencyScore = detectUrgencyScore(profile, allUserText);
+  profile.complexityScore = detectComplexityScore(profile, allUserText);
+  profile.leadScore = detectLeadScore(profile, allUserText);
+  profile.leadSummary = buildIntelligenceSummary(profile);
   profile.confirmed = isConfirmation(messages);
 
   return profile;
@@ -304,21 +382,25 @@ export function isConfirmation(messages = []) {
   const previous = getPreviousAssistantQuestion(messages).toLowerCase();
 
   return (
-    /confirmed brief|save this as|enregistre/.test(previous) &&
-    /^(yes|yes please|confirm|confirmed|ok|okay|save|oui|confirmer|enregistre)/i.test(latest)
+    /confirmed brief|save this as|enregistre|ملخص مؤكد/.test(previous) &&
+    /^(yes|yes please|confirm|confirmed|ok|okay|save|oui|confirmer|enregistre|نعم|اكد|أكد|احفظ)/i.test(latest)
   );
 }
 
 export function getNextIntakeReply({ messages = [], language = "en" }) {
-  const normalizedLanguage = language === "fr" ? "fr" : "en";
+  const normalizedLanguage = normalizeLanguage(language);
   const profile = extractLeadProfile(messages, normalizedLanguage);
   const progress = getLeadProgress(profile);
   const questions = FIELD_QUESTIONS[normalizedLanguage];
 
   if (profile.confirmed) {
-    return normalizedLanguage === "fr"
-      ? "Parfait, le brief est confirme dans le dashboard. L'equipe peut maintenant le revoir."
-      : "Perfect, the brief is confirmed in the dashboard. The team can now review it.";
+    if (normalizedLanguage === "fr") {
+      return "Parfait, le brief est confirme dans le dashboard. L'equipe peut maintenant le revoir.";
+    }
+    if (normalizedLanguage === "ar") {
+      return "تم تأكيد الملخص في لوحة التحكم. يمكن لفريقنا مراجعته الآن.";
+    }
+    return "Perfect, the brief is confirmed in the dashboard. The team can now review it.";
   }
 
   if (progress.missing.length === 0) {
