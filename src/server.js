@@ -12,7 +12,8 @@ import {
 } from "./assistantConfig.js";
 import { loadEnvFile } from "./env.js";
 import { getFastReply, getSafeFallbackReply, looksLikeInternalLeak } from "./fastReplies.js";
-import { createLeadPool, initLeadDatabase, listLeads, saveLead } from "./leadStore.js";
+import { extractLeadProfile, getNextIntakeReply } from "./leadIntake.js";
+import { createLeadPool, initLeadDatabase, listLeads, saveLead, upsertLeadDraft } from "./leadStore.js";
 import { chatWithOllama, streamWithOllama } from "./ollamaClient.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -144,9 +145,10 @@ async function handleChat(request, response) {
 
     const { systemPrompt, knowledgeBase } = await loadAssistantData();
     const fastReply = getFastReply({ messages: userMessages, language });
+    const intakeReply = getNextIntakeReply({ messages: userMessages, language });
 
-    if (fastReply) {
-      sendJson(response, 200, { reply: fastReply, model: "fast-reply" });
+    if (fastReply || intakeReply) {
+      sendJson(response, 200, { reply: fastReply || intakeReply, model: fastReply ? "fast-reply" : "intake-flow" });
       return;
     }
 
@@ -199,6 +201,7 @@ async function handleChatStream(request, response) {
 
     const { systemPrompt, knowledgeBase } = await loadAssistantData();
     const fastReply = getFastReply({ messages: userMessages, language });
+    const intakeReply = getNextIntakeReply({ messages: userMessages, language });
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 90_000);
 
@@ -210,8 +213,8 @@ async function handleChatStream(request, response) {
     didStartStream = true;
 
     try {
-      if (fastReply) {
-        response.write(fastReply);
+      if (fastReply || intakeReply) {
+        response.write(fastReply || intakeReply);
         response.end();
         return;
       }
@@ -317,6 +320,32 @@ async function handleSaveLead(request, response) {
   }
 }
 
+async function handleSaveLeadDraft(request, response) {
+  try {
+    const body = await readJsonBody(request);
+    const pool = await ensureLeadDatabase();
+    const language = body.language === "fr" ? "fr" : "en";
+    const profile = extractLeadProfile(body.messages, language);
+    const lead = await upsertLeadDraft(pool, {
+      ...body,
+      ...profile,
+      sessionId: body.sessionId,
+      projectType: body.projectType || profile.serviceRequested,
+      projectGoal: body.projectGoal || profile.projectGoal,
+      budgetRange: body.budgetRange || profile.budgetRange,
+      timeline: body.timeline || profile.timeline,
+      status: profile.confirmed ? "contacted" : "new",
+      confirmedAt: profile.confirmed ? new Date().toISOString() : null,
+    });
+
+    sendJson(response, 200, { lead, profile });
+  } catch (error) {
+    sendJson(response, 503, {
+      error: error instanceof Error ? error.message : "Unknown lead draft save error",
+    });
+  }
+}
+
 async function handleListLeads(request, response) {
   if (!isAdminAuthorized(request)) {
     sendJson(response, 401, { error: "Unauthorized" });
@@ -373,6 +402,11 @@ const server = createServer(async (request, response) => {
   }
 
   if (request.method === "POST" && request.url?.startsWith("/api/leads")) {
+    if (request.url?.startsWith("/api/leads/draft")) {
+      await handleSaveLeadDraft(request, response);
+      return;
+    }
+
     await handleSaveLead(request, response);
     return;
   }

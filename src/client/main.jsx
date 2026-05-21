@@ -60,12 +60,26 @@ const COPY = {
   },
 };
 
+function getOrCreateSessionId() {
+  const storageKey = "astro-assistant-session-id";
+  const existing = window.localStorage.getItem(storageKey);
+
+  if (existing) {
+    return existing;
+  }
+
+  const nextId = window.crypto?.randomUUID?.() || `astro-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  window.localStorage.setItem(storageKey, nextId);
+  return nextId;
+}
+
 function App() {
   const prefersReducedMotion = useReducedMotion();
   const isAdminRoute = window.location.pathname.startsWith("/admin");
   const [isOpen, setIsOpen] = useState(false);
   const [language, setLanguage] = useState(null);
   const [messages, setMessages] = useState([]);
+  const [sessionId, setSessionId] = useState(getOrCreateSessionId);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [guideStage, setGuideStage] = useState("project-type");
@@ -73,12 +87,20 @@ function App() {
   const [leadStatus, setLeadStatus] = useState(null);
   const [leadDraft, setLeadDraft] = useState({
     name: "",
+    companyName: "",
     email: "",
     phone: "",
+    location: "",
+    serviceRequested: "",
     projectType: "",
     projectGoal: "",
     budgetRange: "",
     timeline: "",
+    communicationMethod: "",
+    additionalNotes: "",
+    fileNotes: "",
+    leadCategory: "",
+    leadProgress: 0,
   });
 
   const copy = COPY[language || "en"];
@@ -131,6 +153,9 @@ function App() {
     setMessages([]);
     setInput("");
     setLeadStatus(null);
+    const nextSessionId = `astro-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    window.localStorage.setItem("astro-assistant-session-id", nextSessionId);
+    setSessionId(nextSessionId);
     setGuideStage("project-type");
   }
 
@@ -150,6 +175,53 @@ function App() {
       ...currentDraft,
       ...patch,
     }));
+  }
+
+  async function syncLeadDraft(nextMessages, patch = {}) {
+    if (!language || !sessionId || !nextMessages.length) {
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/leads/draft", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...leadDraft,
+          ...patch,
+          sessionId,
+          language,
+          messages: nextMessages,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || copy.leadError);
+      }
+
+      if (data.profile) {
+        setLeadDraft((currentDraft) => ({
+          ...currentDraft,
+          ...Object.fromEntries(
+            Object.entries(data.profile).filter(([, value]) => {
+              return value !== null && value !== undefined && value !== "";
+            }),
+          ),
+          projectType: data.profile.serviceRequested || currentDraft.projectType,
+        }));
+      }
+
+      setLeadStatus({ type: "success", message: "Draft saved to dashboard." });
+    } catch (error) {
+      setLeadStatus({
+        type: "error",
+        message: error instanceof Error ? error.message : copy.leadError,
+      });
+    }
   }
 
   function handleGuideChoice(choice) {
@@ -175,13 +247,14 @@ function App() {
     setLeadStatus({ type: "loading", message: "Saving..." });
 
     try {
-      const response = await fetch("/api/leads", {
+      const response = await fetch("/api/leads/draft", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           ...leadDraft,
+          sessionId,
           projectGoal,
           language,
           messages: messages.length ? messages : visibleMessages,
@@ -259,7 +332,9 @@ function App() {
       }
 
       streamedContent += decoder.decode();
-      setMessages([...nextMessages, { role: "assistant", content: streamedContent.trim() }]);
+      const finalMessages = [...nextMessages, { role: "assistant", content: streamedContent.trim() }];
+      setMessages(finalMessages);
+      void syncLeadDraft(finalMessages);
     } catch (error) {
       setMessages([
         ...nextMessages,
@@ -528,11 +603,15 @@ function LeadCaptureModal({ copy, draft, onChange, onClose, onSubmit, status }) 
 
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <LeadInput icon={UserRound} label="Name" value={draft.name} onChange={(value) => onChange("name", value)} />
+          <LeadInput label="Company" value={draft.companyName} onChange={(value) => onChange("companyName", value)} />
           <LeadInput icon={Mail} label="Email" value={draft.email} onChange={(value) => onChange("email", value)} />
           <LeadInput icon={Phone} label="Phone" value={draft.phone} onChange={(value) => onChange("phone", value)} />
+          <LeadInput label="Country / city" value={draft.location} onChange={(value) => onChange("location", value)} />
+          <LeadInput label="Requested service" value={draft.serviceRequested} onChange={(value) => onChange("serviceRequested", value)} />
           <LeadInput label="Project type" value={draft.projectType} onChange={(value) => onChange("projectType", value)} />
           <LeadInput label="Budget" value={draft.budgetRange} onChange={(value) => onChange("budgetRange", value)} />
           <LeadInput label="Timeline" value={draft.timeline} onChange={(value) => onChange("timeline", value)} />
+          <LeadInput label="Preferred contact" value={draft.communicationMethod} onChange={(value) => onChange("communicationMethod", value)} />
         </div>
 
         <label className="mt-3 block text-xs font-bold text-slate-300">
@@ -542,6 +621,16 @@ function LeadCaptureModal({ copy, draft, onChange, onClose, onSubmit, status }) 
             onChange={(event) => onChange("projectGoal", event.target.value)}
             className="mt-2 min-h-20 w-full resize-none rounded-2xl border border-white/10 bg-slate-950/62 px-3 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-cyan-300/45 focus:ring-2 focus:ring-cyan-300/14"
             placeholder="Short project summary..."
+          />
+        </label>
+
+        <label className="mt-3 block text-xs font-bold text-slate-300">
+          Additional notes / files
+          <textarea
+            value={draft.additionalNotes}
+            onChange={(event) => onChange("additionalNotes", event.target.value)}
+            className="mt-2 min-h-16 w-full resize-none rounded-2xl border border-white/10 bg-slate-950/62 px-3 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-cyan-300/45 focus:ring-2 focus:ring-cyan-300/14"
+            placeholder="Links, file URLs, special requirements..."
           />
         </label>
 
@@ -579,7 +668,34 @@ function LeadInput({ icon: Icon, label, value, onChange }) {
 
 function AdminPanel() {
   const [leads, setLeads] = useState([]);
+  const [search, setSearch] = useState("");
   const [status, setStatus] = useState({ type: "loading", message: "Loading leads..." });
+  const filteredLeads = useMemo(() => {
+    const query = search.trim().toLowerCase();
+
+    if (!query) {
+      return leads;
+    }
+
+    return leads.filter((lead) => {
+      return [
+        lead.name,
+        lead.companyName,
+        lead.email,
+        lead.phone,
+        lead.location,
+        lead.serviceRequested,
+        lead.projectType,
+        lead.projectGoal,
+        lead.leadCategory,
+        lead.status,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(query);
+    });
+  }, [leads, search]);
 
   async function loadLeads() {
     setStatus({ type: "loading", message: "Loading leads..." });
@@ -606,6 +722,55 @@ function AdminPanel() {
     loadLeads();
   }, []);
 
+  function exportLeads() {
+    const headers = [
+      "id",
+      "status",
+      "progress",
+      "category",
+      "name",
+      "company",
+      "email",
+      "phone",
+      "location",
+      "service",
+      "goal",
+      "budget",
+      "timeline",
+      "preferred_contact",
+      "notes",
+      "created_at",
+    ];
+    const rows = filteredLeads.map((lead) => [
+      lead.id,
+      lead.status,
+      lead.leadProgress,
+      lead.leadCategory,
+      lead.name,
+      lead.companyName,
+      lead.email,
+      lead.phone,
+      lead.location,
+      lead.serviceRequested || lead.projectType,
+      lead.projectGoal,
+      lead.budgetRange,
+      lead.timeline,
+      lead.communicationMethod,
+      lead.additionalNotes,
+      lead.createdAt,
+    ]);
+    const csv = [headers, ...rows]
+      .map((row) => row.map((value) => `"${String(value || "").replaceAll('"', '""')}"`).join(","))
+      .join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "astro-leads.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <main className="min-h-dvh bg-[#03060c] px-5 py-6 text-white md:px-8">
       <BackgroundAtmosphere />
@@ -616,10 +781,21 @@ function AdminPanel() {
             <h1 className="mt-3 font-display text-4xl font-black tracking-normal">Lead dashboard</h1>
             <p className="mt-2 text-sm text-slate-400">Local PostgreSQL leads from Astro Assistant.</p>
           </div>
-          <Button type="button" className="rounded-full" onClick={loadLeads}>
-            <Inbox className="size-4" />
-            Refresh
-          </Button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search leads..."
+              className="h-10 w-full rounded-full border-white/10 bg-slate-950/70 sm:w-64"
+            />
+            <Button type="button" variant="outline" className="rounded-full" onClick={exportLeads}>
+              Export
+            </Button>
+            <Button type="button" className="rounded-full" onClick={loadLeads}>
+              <Inbox className="size-4" />
+              Refresh
+            </Button>
+          </div>
         </div>
 
         <p
@@ -634,7 +810,7 @@ function AdminPanel() {
         </p>
 
         <div className="mt-6 grid gap-4">
-          {leads.map((lead) => (
+          {filteredLeads.map((lead) => (
             <article
               key={lead.id}
               className="rounded-[1.3rem] border border-white/10 bg-slate-950/62 p-4 shadow-[0_18px_50px_rgba(0,0,0,0.25)] backdrop-blur-xl"
@@ -648,17 +824,26 @@ function AdminPanel() {
                     {[lead.email, lead.phone].filter(Boolean).join(" / ") || "No contact detail yet"}
                   </p>
                 </div>
-                <Badge variant="secondary">{lead.status}</Badge>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="secondary">{lead.status}</Badge>
+                  <Badge variant="secondary">{lead.leadProgress || 0}%</Badge>
+                  {lead.leadCategory && <Badge variant="secondary">{lead.leadCategory}</Badge>}
+                </div>
               </div>
 
               <div className="mt-4 grid gap-3 text-sm text-slate-300 md:grid-cols-4">
                 <LeadFact label="Language" value={lead.language} />
-                <LeadFact label="Type" value={lead.projectType} />
+                <LeadFact label="Company" value={lead.companyName} />
+                <LeadFact label="Location" value={lead.location} />
+                <LeadFact label="Service" value={lead.serviceRequested || lead.projectType} />
                 <LeadFact label="Budget" value={lead.budgetRange} />
                 <LeadFact label="Timeline" value={lead.timeline} />
+                <LeadFact label="Preferred contact" value={lead.communicationMethod} />
+                <LeadFact label="Files / links" value={lead.fileNotes} />
               </div>
 
               {lead.projectGoal && <p className="mt-4 text-sm leading-6 text-slate-200">{lead.projectGoal}</p>}
+              {lead.additionalNotes && <p className="mt-2 text-sm leading-6 text-slate-400">{lead.additionalNotes}</p>}
 
               <details className="mt-4 rounded-2xl border border-white/10 bg-black/18 p-3">
                 <summary className="cursor-pointer text-sm font-bold text-cyan-100">Conversation transcript</summary>
