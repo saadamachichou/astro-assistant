@@ -203,7 +203,7 @@ function setFromPreviousQuestion(profile, question, answer) {
   if (/country|city|pays|ville/.test(normalizedQuestion)) profile.location ||= cleanAnswer;
   if (/investment|budget|fourchette/.test(normalizedQuestion)) profile.budgetRange ||= detectBudget(cleanAnswer) || cleanAnswer;
   if (/start|launch|commencer|lancer/.test(normalizedQuestion)) profile.timeline ||= detectTimeline(cleanAnswer) || cleanAnswer;
-  if (/contacted|contacte|whatsapp|phone|email/.test(normalizedQuestion)) {
+  if (/prefer.*contact|how do you prefer|contacted|contacte|whatsapp/.test(normalizedQuestion)) {
     profile.communicationMethod ||= detectCommunicationMethod(cleanAnswer) || cleanAnswer;
   }
   if (/notes|links|files|requirements|fichiers|exigences/.test(normalizedQuestion)) {

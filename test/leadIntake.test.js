@@ -33,6 +33,7 @@ describe("lead intake", () => {
     assert.equal(profile.name, "Adam Builder");
     assert.equal(profile.email, "adam@example.com");
     assert.equal(profile.phone, "+212 600 000000");
+    assert.equal(profile.communicationMethod, "");
     assert.equal(profile.leadCategory, "landing-page");
   });
 
