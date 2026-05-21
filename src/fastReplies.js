@@ -6,6 +6,8 @@ const REPLIES = {
       "ASTROQODELABS builds websites, web apps, SaaS platforms, e-commerce stores, dashboards, automation, AI chatbots, integrations, and cloud-ready software. What are you trying to create?",
     website:
       "Yes. ASTROQODELABS can build business websites, landing pages, portfolios, WordPress sites, and custom websites focused on mobile UX, speed, and lead generation. What kind of website do you need?",
+    explainWebsite:
+      "A website is your online place where visitors understand your offer, trust you, and take action. Should people contact you, book, buy, or learn?",
     customTech:
       "Absolutely. ASTROQODELABS can build a custom robust stack instead of WordPress, with modern frontend, backend, database, APIs, and deployment. What should it do?",
     webApp:
@@ -26,12 +28,24 @@ const REPLIES = {
       "I can only help with ASTROQODELABS services and your website, app, e-commerce, SaaS, automation, or software project. What are you trying to build?",
     guide:
       "A good first step is to define the goal, users, key features, timeline, and planned investment range. What problem should this project solve first?",
+    ideaPlan:
+      "No problem. We can turn the idea into a plan by choosing the audience, goal, must-have pages, and main action. What is the idea in one sentence?",
+    fullWebsite:
+      "A full website usually includes home, offer, about, trust proof, and contact pages. What business, product, or service should it present?",
+    landingPage:
+      "A landing page is one focused page for one offer. It explains the product, benefits, proof, and next action. What are you launching?",
+    productLaunch:
+      "For a product launch, start with a focused landing page: product, audience, benefits, visuals, and contact or preorder action. What product is it?",
+    productDevice:
+      "That sounds like a strong product landing page. For a mechanical device, show the problem, use cases, photos/video, benefits, and request-quote action. Who should buy it?",
   },
   fr: {
     services:
       "ASTROQODELABS cree des sites web, applications web, SaaS, boutiques e-commerce, dashboards, automatisations, chatbots IA, integrations et logiciels cloud-ready. Que voulez-vous creer ?",
     website:
       "Oui. ASTROQODELABS peut creer des sites vitrine, landing pages, portfolios, sites WordPress et sites sur mesure axes mobile, performance et generation de leads. Quel type de site voulez-vous ?",
+    explainWebsite:
+      "Un site web est votre espace en ligne pour expliquer l'offre, rassurer les visiteurs et les faire agir. Ils doivent vous contacter, reserver, acheter ou decouvrir ?",
     customTech:
       "Oui. ASTROQODELABS peut creer une solution robuste sur mesure au lieu de WordPress, avec frontend, backend, base de donnees, APIs et deploiement. Que doit-elle faire ?",
     webApp:
@@ -52,6 +66,16 @@ const REPLIES = {
       "Je peux seulement aider avec les services ASTROQODELABS et votre projet de site, app, e-commerce, SaaS, automatisation ou logiciel. Que voulez-vous creer ?",
     guide:
       "Le bon depart est de clarifier l'objectif, les utilisateurs, les fonctions essentielles, le delai et l'investissement prevu. Quel probleme voulez-vous resoudre d'abord ?",
+    ideaPlan:
+      "Pas de souci. On peut transformer l'idee en plan avec audience, objectif, pages essentielles et action principale. Quelle est l'idee en une phrase ?",
+    fullWebsite:
+      "Un site complet contient souvent accueil, offre, a propos, preuves de confiance et contact. Quelle activite, produit ou service doit-il presenter ?",
+    landingPage:
+      "Une landing page est une page focalisee sur une offre. Elle explique le produit, les benefices, les preuves et l'action suivante. Que lancez-vous ?",
+    productLaunch:
+      "Pour un lancement produit, commencez par une landing page: produit, audience, benefices, visuels et contact ou precommande. Quel est le produit ?",
+    productDevice:
+      "Cela ressemble a une bonne landing page produit. Pour un appareil mecanique, montrez probleme, usages, visuels, benefices et demande de devis. Qui doit l'acheter ?",
   },
 };
 
@@ -96,6 +120,13 @@ const MATCHERS = [
     ],
   },
   {
+    key: "explainWebsite",
+    patterns: [
+      /\b(what (is|are) websites?|what (is|are) a websites?|what website are|what is a site|dont know what websites? are|don't know what websites? are)\b/i,
+      /\b(c'est quoi un site|un site web c'est quoi|je ne sais pas ce qu'est un site)\b/i,
+    ],
+  },
+  {
     key: "customTech",
     patterns: [
       /\b(no wordpress|not wordpress|without wordpress|dont want wordpress|don't want wordpress|do not want wordpress|robust tech|robuste tech|custom tech|custom stack|from scratch)\b/i,
@@ -115,7 +146,7 @@ const MATCHERS = [
   },
   {
     key: "website",
-    patterns: [/\b(website|site web|landing page|portfolio|wordpress)\b/i, /\b(site vitrine|page de vente)\b/i],
+    patterns: [/\b(website|site web|portfolio|wordpress)\b/i, /\b(site vitrine|page de vente)\b/i],
   },
   {
     key: "services",
@@ -133,6 +164,56 @@ const MATCHERS = [
   },
 ];
 
+const CONTEXTUAL_MATCHERS = [
+  {
+    key: "ideaPlan",
+    patterns: [
+      /\b(only have an idea|need a clear plan|clear plan|turn.*idea.*plan)\b/i,
+      /\b(juste une idee|idee.*plan clair|plan clair)\b/i,
+    ],
+  },
+  {
+    key: "fullWebsite",
+    patterns: [
+      /\b(full website|complete website|whole website|entire website)\b/i,
+      /\b(site complet|site entier)\b/i,
+    ],
+  },
+  {
+    key: "explainWebsite",
+    patterns: [
+      /\b(i dont know u tell me|i don't know you tell me|you tell me|i dont know what website|i don't know what website)\b/i,
+      /\b(je ne sais pas|dis moi|dites moi)\b/i,
+    ],
+  },
+  {
+    key: "landingPage",
+    patterns: [/\b(landing pages?|landing)\b/i, /\b(landing page|page de vente)\b/i],
+  },
+  {
+    key: "productLaunch",
+    patterns: [
+      /\b(product launch|product lauch|launch a product|new product)\b/i,
+      /\b(lancement produit|lancer un produit|nouveau produit)\b/i,
+    ],
+  },
+  {
+    key: "productDevice",
+    patterns: [
+      /\b(mechanical device|mecanical device|device for builders|tool for builders|construction device|builders)\b/i,
+      /\b(appareil mecanique|outil pour constructeurs|outil pour batiment|batiment)\b/i,
+    ],
+  },
+];
+
+const INTERNAL_LEAK_PATTERNS = [
+  /widget behavior/i,
+  /boundaries:/i,
+  /compact company brief/i,
+  /company knowledge/i,
+  /system prompt/i,
+];
+
 export function getFastReply({ messages, language = "en" }) {
   const cleanMessages = Array.isArray(messages) ? messages : [];
   const latestUserMessage = [...cleanMessages].reverse().find((message) => message?.role === "user")?.content || "";
@@ -143,6 +224,20 @@ export function getFastReply({ messages, language = "en" }) {
   }
 
   const normalizedMessage = latestUserMessage.trim();
+  const conversationText = cleanMessages.map((message) => message?.content || "").join("\n").slice(-1400);
+
+  for (const matcher of CONTEXTUAL_MATCHERS) {
+    if (matcher.patterns.some((pattern) => pattern.test(normalizedMessage))) {
+      return REPLIES[normalizedLanguage][matcher.key];
+    }
+  }
+
+  if (
+    /\b(product|device|builder|mechanical|mecanical|produit|appareil|batiment)\b/i.test(normalizedMessage) &&
+    /\b(landing|launch|lancement|page)\b/i.test(conversationText)
+  ) {
+    return REPLIES[normalizedLanguage].productDevice;
+  }
 
   for (const matcher of MATCHERS) {
     if (matcher.patterns.some((pattern) => pattern.test(normalizedMessage))) {
@@ -151,4 +246,14 @@ export function getFastReply({ messages, language = "en" }) {
   }
 
   return "";
+}
+
+export function getSafeFallbackReply(language = "en") {
+  return language === "fr"
+    ? "Je peux vous guider simplement. Dites-moi ce que vous vendez, qui doit l'utiliser, et l'action principale attendue."
+    : "I can guide this simply. Tell me what you offer, who it is for, and the main action visitors should take.";
+}
+
+export function looksLikeInternalLeak(reply) {
+  return typeof reply === "string" && INTERNAL_LEAK_PATTERNS.some((pattern) => pattern.test(reply));
 }

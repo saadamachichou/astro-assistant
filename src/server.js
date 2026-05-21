@@ -11,7 +11,7 @@ import {
   normalizeMessages,
 } from "./assistantConfig.js";
 import { loadEnvFile } from "./env.js";
-import { getFastReply } from "./fastReplies.js";
+import { getFastReply, getSafeFallbackReply, looksLikeInternalLeak } from "./fastReplies.js";
 import { createLeadPool, initLeadDatabase, listLeads, saveLead } from "./leadStore.js";
 import { chatWithOllama, streamWithOllama } from "./ollamaClient.js";
 
@@ -165,7 +165,9 @@ async function handleChat(request, response) {
         numPredict: FAST_REPLY_TOKENS,
       });
 
-      sendJson(response, 200, { reply: compactAssistantReply(reply), model: OLLAMA_MODEL });
+      const safeReply = looksLikeInternalLeak(reply) ? getSafeFallbackReply(language) : compactAssistantReply(reply);
+
+      sendJson(response, 200, { reply: safeReply, model: OLLAMA_MODEL });
     } finally {
       clearTimeout(timeout);
     }
@@ -217,6 +219,7 @@ async function handleChatStream(request, response) {
       let questionCount = 0;
       let streamedCharacters = 0;
       const maxStreamedCharacters = 420;
+      let streamedReply = "";
 
       for await (const token of streamWithOllama({
         baseUrl: OLLAMA_BASE_URL,
@@ -241,6 +244,14 @@ async function handleChatStream(request, response) {
               break;
             }
           }
+        }
+
+        streamedReply += safeToken;
+
+        if (looksLikeInternalLeak(streamedReply)) {
+          response.write(getSafeFallbackReply(language));
+          response.end();
+          return;
         }
 
         response.write(safeToken);
